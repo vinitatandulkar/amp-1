@@ -218,7 +218,7 @@ impl<'a, 'b> BufferRenderer<'a, 'b> {
         !self.before_visible_content() && !self.after_visible_content()
     }
 
-    pub fn render(&mut self) -> Result<Option<Position>> {
+    pub fn render(&mut self, mut skipped_line_count: usize) -> Result<Option<Position>> {
         self.terminal.set_cursor(None);
         // Print the first line number. Others will
         // be handled as newlines are encountered.
@@ -265,6 +265,12 @@ impl<'a, 'b> BufferRenderer<'a, 'b> {
                     // Stop the machine after we've printed all visible content.
                     if self.after_visible_content() {
                         break 'print;
+                    }
+
+                    // Explicitly skip visible lines, when requested.
+                    if skipped_line_count > 0 {
+                        skipped_line_count -= 1;
+                        continue;
                     }
 
                     // We're in a visible area.
@@ -429,7 +435,7 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &Rc::new(RefCell::new(HashMap::new()))
-        ).render().unwrap();
+        ).render(0).unwrap();
     }
 
     #[test]
@@ -457,7 +463,7 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &Rc::new(RefCell::new(HashMap::new()))
-        ).render().unwrap();
+        ).render(0).unwrap();
 
         // Both tabs should fully expand.
         assert_eq!(terminal.content().lines().next(), Some(" 1      xy"));
@@ -488,7 +494,7 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &Rc::new(RefCell::new(HashMap::new()))
-        ).render().unwrap();
+        ).render(0).unwrap();
 
         // The space between the tabs should just eat into the second tab's width.
         assert_eq!(terminal.content().lines().next(), Some(" 1      xy"));
@@ -516,7 +522,7 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &Rc::new(RefCell::new(HashMap::new()))
-        ).render().unwrap();
+        ).render(0).unwrap();
 
         assert_eq!(
             terminal.content().lines().take(5).collect::<Vec<&str>>(),
@@ -554,7 +560,7 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &Rc::new(RefCell::new(HashMap::new()))
-        ).render().unwrap();
+        ).render(0).unwrap();
 
         assert_eq!(terminal.content().lines().next(), Some(" 1  mapped"));
     }
@@ -581,7 +587,7 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &Rc::new(RefCell::new(HashMap::new()))
-        ).render().unwrap();
+        ).render(0).unwrap();
 
         assert_eq!(cursor_position, Some(Position{ line: 0, offset: 4 }));
     }
@@ -612,7 +618,7 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &render_cache
-        ).render().unwrap();
+        ).render(0).unwrap();
 
         assert_eq!(render_cache.borrow().keys().count(), 5);
     }
@@ -644,7 +650,7 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &render_cache
-        ).render().unwrap();
+        ).render(0).unwrap();
 
         assert_eq!(render_cache.borrow().keys().count(), 1);
         let initial_cache = render_cache.borrow().values().nth(0).unwrap().clone();
@@ -663,7 +669,7 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &render_cache
-        ).render().unwrap();
+        ).render(0).unwrap();
 
         assert_eq!(render_cache.borrow().keys().count(), 5);
         for value in render_cache.borrow().values() {
@@ -698,7 +704,7 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &render_cache
-        ).render().unwrap();
+        ).render(0).unwrap();
 
         assert_eq!(render_cache.borrow().keys().count(), 1);
         terminal.clear();
@@ -717,11 +723,41 @@ mod tests {
             &theme_set.themes["base16-ocean.dark"],
             &preferences,
             &render_cache
-        ).render().unwrap();
+        ).render(0).unwrap();
 
         assert_eq!(
             terminal.content().lines().take(4).collect::<Vec<&str>>(),
             vec![" 201  line", " 202  line", " 203  line", " 204      "]
+        );
+    }
+
+    #[test]
+    fn render_skips_lines_correctly_when_asked() {
+        // Set up a workspace and buffer; the workspace will
+        // handle setting up the buffer's syntax definition.
+        let mut workspace = Workspace::new(Path::new(".")).unwrap();
+        let mut buffer = Buffer::new();
+        buffer.insert("amp\nsecond\nthird\n");
+        workspace.add_buffer(buffer);
+
+        let mut terminal = TestTerminal::new();
+        let theme_set = ThemeSet::load_defaults();
+        let preferences = Preferences::new(None);
+
+        BufferRenderer::new(
+            workspace.current_buffer().unwrap(),
+            None,
+            None,
+            0,
+            &mut terminal,
+            &theme_set.themes["base16-ocean.dark"],
+            &preferences,
+            &Rc::new(RefCell::new(HashMap::new()))
+        ).render(1).unwrap();
+
+        assert_eq!(
+            terminal.content().lines().take(3).collect::<Vec<&str>>(),
+            vec![" 1        ", " 2  second", " 3  third "]
         );
     }
 }

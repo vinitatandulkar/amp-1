@@ -85,7 +85,7 @@ impl View {
             theme,
             &self.preferences.borrow(),
             self.get_render_cache(buffer)?
-        ).render()?;
+        ).render(0)?;
 
         self.cursor_position = cursor_position;
 
