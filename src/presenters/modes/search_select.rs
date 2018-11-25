@@ -12,9 +12,6 @@ use unicode_segmentation::UnicodeSegmentation;
 pub fn display<T: Display>(workspace: &mut Workspace, mode: &mut SearchSelectMode<T>, view: &mut View) -> Result<()> {
     let mode_config = mode.config().clone();
 
-    // Wipe the slate clean.
-    view.clear();
-
     let buffer_status = current_buffer_status_line_data(workspace);
 
     if let Some(buf) = workspace.current_buffer() {
@@ -29,6 +26,8 @@ pub fn display<T: Display>(workspace: &mut Workspace, mode: &mut SearchSelectMod
             },
             buffer_status
         ]);
+    } else {
+        view.clear();
     }
 
     if let Some(message) = mode.message() {

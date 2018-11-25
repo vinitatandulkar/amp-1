@@ -5,9 +5,6 @@ use crate::presenters::current_buffer_status_line_data;
 use crate::view::{Colors, StatusLineData, Style, View};
 
 pub fn display(workspace: &mut Workspace, mode: &SelectLineMode, view: &mut View) -> Result<()> {
-    // Wipe the slate clean.
-    view.clear();
-
     let buffer_status = current_buffer_status_line_data(workspace);
 
     if let Some(buf) = workspace.current_buffer() {
@@ -27,6 +24,7 @@ pub fn display(workspace: &mut Workspace, mode: &SelectLineMode, view: &mut View
             buffer_status
         ]);
     } else {
+        view.clear();
         // There's no buffer; clear the cursor.
         view.set_cursor(None);
     }

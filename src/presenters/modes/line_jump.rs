@@ -5,9 +5,6 @@ use crate::models::application::modes::LineJumpMode;
 use crate::view::{Colors, StatusLineData, Style, View};
 
 pub fn display(workspace: &mut Workspace, mode: &LineJumpMode, view: &mut View) -> Result<()> {
-    // Wipe the slate clean.
-    view.clear();
-
     if let Some(buf) = workspace.current_buffer() {
         // Draw the visible set of tokens to the terminal.
         view.draw_buffer(buf, None, None)?;
@@ -29,6 +26,8 @@ pub fn display(workspace: &mut Workspace, mode: &LineJumpMode, view: &mut View) 
             line: cursor_line,
             offset: input_prompt_len,
         }));
+    } else {
+        view.clear();
     }
 
     // Render the changes to the screen.
