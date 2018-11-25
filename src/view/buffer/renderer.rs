@@ -1,4 +1,5 @@
 use crate::models::application::Preferences;
+use pad::PadStr;
 use scribe::buffer::{Buffer, Position, Range};
 use scribe::util::LineIterator;
 use crate::view::buffer::{LexemeMapper, MappedLexeme, RenderState};
@@ -170,6 +171,9 @@ impl<'a, 'b> BufferRenderer<'a, 'b> {
 
             if self.preferences.line_wrapping() && self.screen_position.offset == self.terminal.width() {
                 self.screen_position.line += 1;
+                self.screen_position.offset = 0;
+                let content = String::new().pad_to_width(self.gutter_width);
+                self.terminal.print(&self.screen_position, style, color, &content);
                 self.screen_position.offset = self.gutter_width;
                 self.terminal.print(&self.screen_position, style, color, &character);
                 self.screen_position.offset += 1;
@@ -290,6 +294,11 @@ impl<'a, 'b> BufferRenderer<'a, 'b> {
             }
         }
 
+        while !self.after_visible_content() {
+            self.advance_to_next_line();
+            self.print_rest_of_line();
+        }
+
         self.set_cursor();
 
         // One last call to this for the last line.
@@ -326,6 +335,13 @@ impl<'a, 'b> BufferRenderer<'a, 'b> {
                 &Position{ line: self.screen_position.line, offset: self.line_numbers.width() },
                 weight,
                 self.theme.map_colors(Colors::Focused),
+                &line_number
+            );
+        } else {
+            self.terminal.print(
+                &Position{ line: self.screen_position.line, offset: self.line_numbers.width() },
+                weight,
+                self.theme.map_colors(Colors::Default),
                 &line_number
             );
         }
@@ -443,7 +459,7 @@ mod tests {
         ).render().unwrap();
 
         // Both tabs should fully expand.
-        assert_eq!(terminal.content(), " 1      xy");
+        assert_eq!(terminal.content().lines().next(), Some(" 1      xy"));
     }
 
     #[test]
@@ -474,7 +490,7 @@ mod tests {
         ).render().unwrap();
 
         // The space between the tabs should just eat into the second tab's width.
-        assert_eq!(terminal.content(), " 1      xy");
+        assert_eq!(terminal.content().lines().next(), Some(" 1      xy"));
     }
 
     #[test]
@@ -502,8 +518,9 @@ mod tests {
         ).render().unwrap();
 
         assert_eq!(
-            terminal.content(),
-            " 1  amp ed\n    itor  \n 2  second\n     line \n 3        ");
+            terminal.content().lines().take(5).collect::<Vec<&str>>(),
+            vec![" 1  amp ed", "    itor  ", " 2  second", "     line ", " 3        "]
+        );
     }
 
     // Used to test lexeme mapper usage.
@@ -538,7 +555,7 @@ mod tests {
             &Rc::new(RefCell::new(HashMap::new()))
         ).render().unwrap();
 
-        assert_eq!(terminal.content(), " 1  mapped");
+        assert_eq!(terminal.content().lines().next(), Some(" 1  mapped"));
     }
 
     #[test]
@@ -702,7 +719,8 @@ mod tests {
         ).render().unwrap();
 
         assert_eq!(
-            terminal.content(),
-            " 201  line\n 202  line\n 203  line\n 204      ");
+            terminal.content().lines().take(4).collect::<Vec<&str>>(),
+            vec![" 201  line", " 202  line", " 203  line", " 204      "]
+        );
     }
 }
