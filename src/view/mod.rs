@@ -68,7 +68,7 @@ impl View {
         })
     }
 
-    pub fn draw_buffer(&mut self, buffer: &Buffer, highlights: Option<&[Range]>, lexeme_mapper: Option<&mut LexemeMapper>) -> Result<()> {
+    pub fn draw_buffer(&mut self, buffer: &Buffer, highlights: Option<&[Range]>, lexeme_mapper: Option<&mut LexemeMapper>, skipped_line_count: Option<usize>) -> Result<()> {
         let scroll_offset = self.get_region(buffer)?.line_offset();
         let preferences = self.preferences.borrow();
         let theme_name = preferences.theme();
@@ -85,7 +85,7 @@ impl View {
             theme,
             &self.preferences.borrow(),
             self.get_render_cache(buffer)?
-        ).render(0)?;
+        ).render(skipped_line_count.unwrap_or(0))?;
 
         self.cursor_position = cursor_position;
 

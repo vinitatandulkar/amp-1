@@ -15,7 +15,7 @@ pub fn display<T: Display>(workspace: &mut Workspace, mode: &mut SearchSelectMod
     let buffer_status = current_buffer_status_line_data(workspace);
 
     if let Some(buf) = workspace.current_buffer() {
-        view.draw_buffer(buf, None, None)?;
+        view.draw_buffer(buf, None, None, Some(mode_config.max_results+1))?;
 
         // Draw the status line.
         view.draw_status_line(&[

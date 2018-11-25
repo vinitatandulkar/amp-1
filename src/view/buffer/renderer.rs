@@ -220,9 +220,13 @@ impl<'a, 'b> BufferRenderer<'a, 'b> {
 
     pub fn render(&mut self, mut skipped_line_count: usize) -> Result<Option<Position>> {
         self.terminal.set_cursor(None);
-        // Print the first line number. Others will
-        // be handled as newlines are encountered.
-        self.print_line_number();
+        if skipped_line_count == 0 {
+            // Print the first line number. Others will
+            // be handled as newlines are encountered.
+            self.print_line_number();
+        } else {
+            self.line_numbers.next();
+        }
 
         // We only use the lexeme mapper in this method, and by moving it out of
         // the buffer renderer type, we can use it while still allowing the

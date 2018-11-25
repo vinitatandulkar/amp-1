@@ -7,7 +7,7 @@ use crate::view::{Colors, StatusLineData, Style, View};
 pub fn display(workspace: &mut Workspace, mode: &LineJumpMode, view: &mut View) -> Result<()> {
     if let Some(buf) = workspace.current_buffer() {
         // Draw the visible set of tokens to the terminal.
-        view.draw_buffer(buf, None, None)?;
+        view.draw_buffer(buf, None, None, None)?;
 
         // Draw the status line as an input prompt.
         let input_prompt = format!("Go to line: {}", mode.input);
