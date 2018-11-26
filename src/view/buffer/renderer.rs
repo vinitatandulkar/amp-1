@@ -219,14 +219,19 @@ impl<'a, 'b> BufferRenderer<'a, 'b> {
     }
 
     pub fn render(&mut self, mut skipped_line_count: usize) -> Result<Option<Position>> {
-        self.terminal.set_cursor(None);
-        if skipped_line_count == 0 {
-            // Print the first line number. Others will
-            // be handled as newlines are encountered.
-            self.print_line_number();
-        } else {
+        // Move display state past skipped lines.
+        self.screen_position.line = skipped_line_count;
+        for _ in 0..skipped_line_count {
             self.line_numbers.next();
         }
+
+        // If not hidden, the cursor will flicker across the screen as the
+        // buffer is rendered; hiding it prevents this.
+        self.terminal.set_cursor(None);
+
+        // Print the first line number. Others will
+        // be handled as newlines are encountered.
+        self.print_line_number();
 
         // We only use the lexeme mapper in this method, and by moving it out of
         // the buffer renderer type, we can use it while still allowing the
@@ -260,6 +265,12 @@ impl<'a, 'b> BufferRenderer<'a, 'b> {
                     &highlighter
                 );
 
+                // Move line iterator past skipped lines.
+                if skipped_line_count > 0 {
+                    skipped_line_count -= 1;
+                    continue;
+                }
+
                 for (style, lexeme) in styled_lexemes {
                     // Move along until we've hit visible content.
                     if self.before_visible_content() {
@@ -269,12 +280,6 @@ impl<'a, 'b> BufferRenderer<'a, 'b> {
                     // Stop the machine after we've printed all visible content.
                     if self.after_visible_content() {
                         break 'print;
-                    }
-
-                    // Explicitly skip visible lines, when requested.
-                    if skipped_line_count > 0 {
-                        skipped_line_count -= 1;
-                        continue;
                     }
 
                     // We're in a visible area.
