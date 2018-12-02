@@ -311,8 +311,12 @@ impl<'a, 'b> BufferRenderer<'a, 'b> {
         }
 
         while !self.after_visible_content() {
-            self.advance_to_next_line();
+            // Move the buffer position to the next line.
             self.print_rest_of_line();
+            self.buffer_position.line += 1;
+            self.screen_position.line += 1;
+            self.buffer_position.offset = 0;
+            self.screen_position.offset = 0;
         }
 
         self.set_cursor();
