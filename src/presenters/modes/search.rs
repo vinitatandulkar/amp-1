@@ -6,9 +6,6 @@ use unicode_segmentation::UnicodeSegmentation;
 use crate::view::{Colors, StatusLineData, Style, View};
 
 pub fn display(workspace: &mut Workspace, mode: &SearchMode, view: &mut View) -> Result<()> {
-    // Wipe the slate clean.
-    view.clear();
-
     // Draw the visible set of tokens to the terminal.
     let buffer = workspace.current_buffer().ok_or(BUFFER_MISSING)?;
     view.draw_buffer(buffer, mode.results.as_ref().map(|r| r.as_slice()), None)?;
