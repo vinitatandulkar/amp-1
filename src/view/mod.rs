@@ -387,14 +387,14 @@ mod tests {
         view.scroll_down(workspace.current_buffer().unwrap(), 105).unwrap();
 
         // Draw the buffer and capture the terminal data.
-        view.draw_buffer(workspace.current_buffer().unwrap(), None, None).unwrap();
+        view.draw_buffer(workspace.current_buffer().unwrap(), None, None, None).unwrap();
         let initial_data = terminal.data();
 
         // By inserting a single quote, we'll change the color of the entire
         // buffer. We'll then check the terminal to ensure the color hasn't
         // actually changed, because of the cache.
         workspace.current_buffer().unwrap().insert("\"");
-        view.draw_buffer(workspace.current_buffer().unwrap(), None, None).unwrap();
+        view.draw_buffer(workspace.current_buffer().unwrap(), None, None, None).unwrap();
         assert_eq!(terminal.data(), initial_data);
     }
 
