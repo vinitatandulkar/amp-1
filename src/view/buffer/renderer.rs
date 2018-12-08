@@ -773,4 +773,34 @@ mod tests {
             vec![" 1        ", " 2  second", " 3  third "]
         );
     }
+
+    #[test]
+    fn render_skips_lines_correctly_when_scrolled() {
+        // Set up a workspace and buffer; the workspace will
+        // handle setting up the buffer's syntax definition.
+        let mut workspace = Workspace::new(Path::new(".")).unwrap();
+        let mut buffer = Buffer::new();
+        buffer.insert("amp\nsecond\nthird\n");
+        workspace.add_buffer(buffer);
+
+        let mut terminal = TestTerminal::new();
+        let theme_set = ThemeSet::load_defaults();
+        let preferences = Preferences::new(None);
+
+        BufferRenderer::new(
+            workspace.current_buffer().unwrap(),
+            None,
+            None,
+            1,
+            &mut terminal,
+            &theme_set.themes["base16-ocean.dark"],
+            &preferences,
+            &Rc::new(RefCell::new(HashMap::new()))
+        ).render(1).unwrap();
+
+        assert_eq!(
+            terminal.content().lines().take(3).collect::<Vec<&str>>(),
+            vec![" 2        ", " 3  third "]
+        );
+    }
 }
