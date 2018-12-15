@@ -2,6 +2,7 @@ extern crate libc;
 extern crate termion;
 
 use crate::errors::*;
+use crate::view::terminal::{Cell, TerminalBuffer};
 use mio::{Events, Poll, PollOpt, Ready, Token};
 use mio::unix::EventedFd;
 use super::Terminal;
@@ -27,6 +28,7 @@ use crate::models::application::Event;
 const STDIN_INPUT: Token = Token(0);
 
 pub struct TermionTerminal {
+    terminal_buffer: Mutex<TerminalBuffer>,
     event_listener: Poll,
     input: Mutex<Option<Keys<Stdin>>>,
     output: Mutex<Option<BufWriter<RawTerminal<Stdout>>>>,
@@ -37,7 +39,10 @@ pub struct TermionTerminal {
 impl TermionTerminal {
     #[allow(dead_code)]
     pub fn new() -> TermionTerminal {
+        let (width, height) = terminal_size();
+
         TermionTerminal {
+            terminal_buffer: Mutex::new(TerminalBuffer::new(width, height)),
             event_listener: create_event_listener().unwrap(),
             input: Mutex::new(Some(stdin().keys())),
             output: Mutex::new(Some(create_output_instance())),
@@ -204,18 +209,9 @@ impl Terminal for TermionTerminal {
     }
 
     fn print(&self, position: &Position, style: Style, colors: Colors, content: &Display) {
-        self.update_style(style);
-        self.update_colors(colors);
-
-        if let Ok(mut guard) = self.output.lock() {
-            if let Some(ref mut output) = *guard {
-                // Now that style and color have been addressed, print the content.
-                let _ = write!(
-                    output,
-                    "{}{}",
-                    cursor_position(position),
-                    content
-                );
+        if let Ok(mut buffer) = self.terminal_buffer.lock() {
+            for c in format!("{}", content).chars() {
+                buffer.set_cell(*position, Cell{ content: c, colors: colors });
             }
         }
     }
