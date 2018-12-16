@@ -13,6 +13,7 @@ use self::termion::color::{Bg, Fg};
 use self::termion::{color, cursor};
 use self::termion::input::{Keys, TermRead};
 use self::termion::raw::{IntoRawMode, RawTerminal};
+use self::termion::screen::*;
 use self::termion::style;
 use std::io::{BufWriter, Stdin, stdin, stdout, Write};
 use std::ops::Drop;
@@ -26,23 +27,73 @@ use crate::models::application::Event;
 
 const STDIN_INPUT: Token = Token(0);
 
+enum Screen {
+    Main,
+    Alternate
+}
+
 pub struct TermionTerminal {
     event_listener: Poll,
     input: Mutex<Option<Keys<Stdin>>>,
     output: Mutex<Option<BufWriter<RawTerminal<Stdout>>>>,
+    alt_output: Mutex<Option<BufWriter<AlternateScreen<RawTerminal<Stdout>>>>>,
     current_style: Mutex<Option<Style>>,
     current_colors: Mutex<Option<Colors>>,
+    screen: Mutex<Screen>,
 }
 
 impl TermionTerminal {
     #[allow(dead_code)]
     pub fn new() -> TermionTerminal {
-        TermionTerminal {
+        let terminal = TermionTerminal {
             event_listener: create_event_listener().unwrap(),
             input: Mutex::new(Some(stdin().keys())),
             output: Mutex::new(Some(create_output_instance())),
+            alt_output: Mutex::new(Some(create_alt_output_instance())),
             current_style: Mutex::new(None),
             current_colors: Mutex::new(None),
+            screen: Mutex::new(Screen::Main),
+        };
+
+        terminal.sync_screen();
+        terminal
+    }
+
+    fn switch_screen(&self) {
+        if let Ok(mut guard) = self.screen.lock() {
+            *guard = match *guard {
+                Screen::Main => Screen::Alternate,
+                Screen::Alternate => Screen::Main,
+            }
+        }
+
+        self.sync_screen();
+    }
+
+    fn sync_screen(&self) {
+        match *self.screen.lock().unwrap() {
+            Screen::Main => {
+                if let Ok(mut guard) = self.output.lock() {
+                    if let Some(ref mut output) = *guard {
+                        let _ = write!(
+                            output,
+                            "{}",
+                            ToMainScreen
+                        );
+                    }
+                }
+            },
+            Screen::Alternate => {
+                if let Ok(mut guard) = self.alt_output.lock() {
+                    if let Some(ref mut alt_output) = *guard {
+                        let _ = write!(
+                            alt_output,
+                            "{}",
+                            ToAlternateScreen
+                        );
+                    }
+                }
+            }
         }
     }
 
@@ -171,6 +222,7 @@ impl Terminal for TermionTerminal {
         if let Ok(mut output) = self.output.lock() {
             output.as_mut().map(|t| t.flush());
         }
+
     }
 
     fn width(&self) -> usize {
@@ -282,6 +334,11 @@ fn create_event_listener() -> Result<Poll> {
 fn create_output_instance() -> BufWriter<RawTerminal<Stdout>> {
     // Use a 1MB buffered writer for stdout.
     BufWriter::with_capacity(1_048_576, stdout().into_raw_mode().unwrap())
+}
+
+fn create_alt_output_instance() -> BufWriter<AlternateScreen<RawTerminal<Stdout>>> {
+    // Use a 1MB buffered writer for stdout.
+    BufWriter::with_capacity(1_048_576, AlternateScreen::from(stdout().into_raw_mode().unwrap()))
 }
 
 fn map_style(style: Style) -> Option<Box<Display>> {
