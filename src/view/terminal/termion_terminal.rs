@@ -173,8 +173,20 @@ impl Terminal for TermionTerminal {
     }
 
     fn present(&self) {
-        if let Ok(mut output) = self.output.lock() {
-            output.as_mut().map(|t| t.flush());
+        if let Ok(mut guard) = self.output.lock() {
+            if let Some(ref mut output) = *guard {
+                if let Ok(buffer) = self.terminal_buffer.lock() {
+                    for (position, cell) in buffer.iter() {
+                        let _ = write!(
+                            output,
+                            "{}{}",
+                            cursor_position(&position),
+                            cell.content
+                        );
+                    }
+                }
+                output.flush();
+            }
         }
     }
 
