@@ -169,10 +169,8 @@ impl Terminal for TermionTerminal {
 
         // It's important to reset the terminal styles prior to clearing the
         // screen, otherwise the current background color will be used.
-        if let Ok(mut guard) = self.output.lock() {
-            if let Some(ref mut output) = *guard {
-                let _ = write!(output, "{}{}", style::Reset, termion::clear::All);
-            }
+        if let Ok(mut buffer) = self.terminal_buffer.lock() {
+            buffer.clear();
         }
     }
 
